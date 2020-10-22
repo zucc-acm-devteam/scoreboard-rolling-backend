@@ -55,26 +55,36 @@ def get_data(full_file_name, address, username, password, contest_id):
             contest_meta['teams'].append(team['id'])
         url = '{}/api/v4/contests/{}/judgement-types'.format(address, contest_id)
         res = spider_http.get(url=url).json()
-        judgement_types_filter = {
-            judgement_type['id']: judgement_type['solved'] or judgement_type['penalty']
-            for judgement_type in res
+        judgement_types = {
+            judgement_type_info['id']: judgement_type_info
+            for judgement_type_info in res
         }
+        print(judgement_types)
         url = '{}/api/v4/contests/{}/judgements'.format(address, contest_id)
         res = spider_http.get(url=url).json()
         judgements = {
             judgement['submission_id']: judgement['judgement_type_id']
-            for judgement in res if judgement['valid'] and judgement_types_filter[judgement['judgement_type_id']]
+            for judgement in res if judgement['valid'] and
+                                    (judgement_types[judgement['judgement_type_id']]['penalty'] or
+                                     judgement_types[judgement['judgement_type_id']]['solved'])
         }
-
         url = '{}/api/v4/contests/{}/submissions'.format(address, contest_id)
         res = spider_http.get(url=url).json()
+        solved_list = set()
         for submission in res:
             time = datetime.strptime(submission['time'], "%Y-%m-%dT%H:%M:%S.%f%z")
+            problem = problems[submission['problem_id']]
+            solved = judgement_types[judgements[submission['id']]]['solved']
+            first_to_solve = False
+            if solved and problem not in solved_list:
+                first_to_solve = True
+                solved_list.add(problem)
             if submission['team_id'] in teams.keys():
                 teams[submission['team_id']]['submissions'].append({
-                    'problem': problems[submission['problem_id']],
+                    'problem': problem,
                     'pending': time > freeze_time,
-                    'result': judgements[submission['id']],
+                    'pass': solved,
+                    'first_to_solve': first_to_solve,
                     'time': math.floor((time - start_time).total_seconds() / 60)
                 })
         result['data'] = {
