@@ -125,3 +125,5 @@ dmypy.json
 .pyre/
 
 .idea/
+*.json
+secure.py
