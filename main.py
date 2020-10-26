@@ -59,7 +59,6 @@ def get_data(full_file_name, address, username, password, contest_id):
             judgement_type_info['id']: judgement_type_info
             for judgement_type_info in res
         }
-        print(judgement_types)
         url = '{}/api/v4/contests/{}/judgements'.format(address, contest_id)
         res = spider_http.get(url=url).json()
         judgements = {
@@ -74,6 +73,8 @@ def get_data(full_file_name, address, username, password, contest_id):
         for submission in res:
             time = datetime.strptime(submission['time'], "%Y-%m-%dT%H:%M:%S.%f%z")
             problem = problems[submission['problem_id']]
+            if submission['id'] not in judgements:
+                continue
             solved = judgement_types[judgements[submission['id']]]['solved']
             first_to_solve = False
             if solved and problem not in solved_list:
@@ -94,9 +95,9 @@ def get_data(full_file_name, address, username, password, contest_id):
         result['success'] = True
     except Exception as e:
         result['data'] = {
-            'error': str(e)
+            'error': repr(e)
         }
-        print(str(e))
+        raise e
     with open(full_file_name, 'w') as fp:
         json.dump(result, fp)
 
@@ -104,4 +105,4 @@ def get_data(full_file_name, address, username, password, contest_id):
 if __name__ == '__main__':
     from secure import username, password, address
 
-    get_data('data.json', address, username, password, 5)
+    get_data('data.json', address, username, password, 4)
